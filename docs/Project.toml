@@ -1,0 +1,3 @@
+[deps]
+CookBooks = "7bce7c31-0f61-4fd7-bdaf-6b04abfa2cc7"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
