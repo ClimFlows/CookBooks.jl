@@ -1,10 +1,10 @@
 name = "CookBooks"
 uuid = "7bce7c31-0f61-4fd7-bdaf-6b04abfa2cc7"
 authors = ["The ClimFlows contributors"]
-version = "0.1.0"
+version = "0.2.0"
 
 [compat]
-julia = "1.8"
+julia = "1.8" # 1.7 fails
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

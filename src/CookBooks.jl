@@ -16,7 +16,7 @@ Function argument names matter in order to identify dependencies between recipes
 requires evaluating `fun1` first, and passing the result of `fun1` to `fun2`.
 Once the cookbook is complete, one opens at any time a fresh cooking session by:
 
-    session = cookbook(; data1=val1, data2=val2, ...)
+    session = open(cookbook; data1=val1, data2=val2, ...)
 
 In addition to data provided as above at session creation time, data can be added to an existing session by:
 
@@ -28,7 +28,7 @@ Data is fetched by:
 
 Recipes from the coobook will be called if the required data is not already present in the session.
 The session stores user-provided data and any additional data computed during its lifetime.
-A given result is computed only once per session.
+A given result is computed at most once per session.
 
 The special argument name `all` represents the session itself. Therefore a function :
 
@@ -45,7 +45,7 @@ If a function has several methods with different argument names, it is called wi
 Checking methods and argument names is done each time `fun` is called.
 """
 struct CookBook
-    recipes::Dict{Symbol, Any}
+    recipes::Dict{Symbol,Any}
     CookBook(; kwargs...) = new(kwargs)
 end
 
@@ -57,9 +57,9 @@ function print_recipe(sym, def::Function)
 end
 
 function Base.show(io::IO, book::CookBook)
-    println(io, "┌ CookBooks.CookBook" )
+    println(io, "┌ CookBooks.CookBook")
     for (key, recipe) in book.recipes
-        println(io, "│    ", print_recipe(key, recipe) )
+        println(io, "│    ", print_recipe(key, recipe))
     end
 end
 
@@ -69,18 +69,19 @@ Base.setproperty!(book::CookBook, sym::Symbol, value) = (book.recipes[sym] = val
 
 struct Session
     book::CookBook
-    values::Dict{Symbol, Any}
+    values::Dict{Symbol,Any}
     lock::ReentrantLock
-    stack :: Vector{Symbol}
+    stack::Vector{Symbol}
     Session(recipes, values) = new(recipes, values, ReentrantLock(), Symbol[])
 end
-(book::CookBook)(; kwargs...) = Session(book, kwargs)
+Base.open(book::CookBook; kwargs...) = Session(book, kwargs)
+Base.close(::Session) = nothing
 
 function Base.show(io::IO, session::Session)
     println(io)
-    println(io, "┌ CookBooks.Session" )
+    println(io, "┌ CookBooks.Session")
     for (key, def) in session.values
-        println(io, "│    ", print_value(key, def) )
+        println(io, "│    ", print_value(key, def))
     end
     println(io, session.book)
 end
@@ -101,9 +102,10 @@ function Base.getproperty(session::Session, prop::Symbol)
     end
 end
 
-struct DependsOn ; end
+struct DependsOn end
 
-get(session::Session, syms::NTuple{N,Symbol}) where N = NamedTuple{syms}(map(sym->get(session, sym), syms))
+get(session::Session, syms::NTuple{N,Symbol}) where {N} =
+    NamedTuple{syms}(map(sym -> get(session, sym), syms))
 
 function get(session::Session, sym::Symbol)
     (; book, values) = session
@@ -114,7 +116,7 @@ function get(session::Session, sym::Symbol)
     end
 end
 
-function fetch(session, sym, fun::F, ::F) where F<:Function
+function fetch(session, sym, fun::F, ::F) where {F<:Function}
     return lock(session.lock) do
         pushfirst!(session.stack, sym)
         session.values[sym] = DependsOn()
@@ -124,8 +126,8 @@ function fetch(session, sym, fun::F, ::F) where F<:Function
     end
 end
 
-function fun_arg_names(fun::F) where F
-    args = ( meth_arg_names(meth) for meth in methods(fun) )
+function fun_arg_names(fun::F) where {F}
+    args = (meth_arg_names(meth) for meth in methods(fun))
     return allequal(args) ? first(args) : (:all,)
 end
 
